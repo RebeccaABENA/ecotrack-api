@@ -13,7 +13,11 @@ Le projet a été réalisé dans le cadre d’un TP d’API avec les objectifs s
 - Importer des données réelles depuis des fichiers CSV.
 - Proposer un front minimaliste pour consommer et tester l’API.
 
-<img width="959" height="480" alt="image" src="https://github.com/user-attachments/assets/9b60b8ec-cfb4-465a-a46f-820460182fe6" />
+<img width="960" height="479" alt="image" src="https://github.com/user-attachments/assets/5941b525-ce84-4d98-9d88-459550bb51d2" />
+
+
+<img width="566" height="265" alt="image" src="https://github.com/user-attachments/assets/f399b78b-bbf2-4b8e-a53b-ec009e908ce1" />
+
 
 <img width="960" height="477" alt="image" src="https://github.com/user-attachments/assets/7f07d494-dfd9-4038-ad1c-23228b130292" />
 
