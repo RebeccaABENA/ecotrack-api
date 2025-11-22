@@ -220,14 +220,14 @@ Sous Windows :
 
 ```bash
 
-python -m venv venv
+python -m venv vecotrack
 venv\Scripts\activate
 ```
 Sous Mac / Linux :
 
 ```Bash
 
-python3 -m venv venv
+python3 -m venv vecotrack
 source venv/bin/activate
 ```
 Étape 3 : Installer les dépendances
