@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>EcoTrack - Tableau de bord</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Chart.js pour les graphes -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg: #0f172a;
+            --bg-soft: #111827;
+            --card-bg: #0b1220;
+            --accent: #38bdf8;
+            --accent-soft: rgba(56, 189, 248, 0.1);
+            --accent-strong: #0ea5e9;
+            --border: #1f2937;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --text-main: #e5e7eb;
+            --text-muted: #9ca3af;
+        }
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: radial-gradient(circle at top, #020617 0, #020617 40%, #020617 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Légère texture / image de fond */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image: url("https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1600&q=80");
+            background-size: cover;
+            background-position: center;
+            opacity: 0.07;
+            pointer-events: none;
+            z-index: -2;
+        }
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at top, rgba(56,189,248,0.28), transparent 55%),
+                        radial-gradient(circle at bottom right, rgba(34,197,94,0.18), transparent 60%);
+            mix-blend-mode: screen;
+            opacity: 0.9;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        header {
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .logo-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 999px;
+            background: radial-gradient(circle at 30% 30%, #fff, #38bdf8 60%, #0f172a 100%);
+            box-shadow: 0 0 20px rgba(56,189,248,0.6);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.4rem;
+            letter-spacing: 0.04em;
+        }
+        header p {
+            margin: 0;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        header .right {
+            text-align: right;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+        }
+        .badge-secondary {
+            background: rgba(148,163,184,0.2);
+            color: var(--text-muted);
+        }
+        .badge-success {
+            background: rgba(22,163,74,0.3);
+            color: var(--success);
+        }
+
+        main {
+            padding: 1rem 2rem 3rem;
+        }
+
+        /* Transitions globales */
+        .card, button, input, select, textarea {
+            transition: all 0.18s ease-out;
+        }
+
+        /* VUES */
+        .view {
+            display: none;
+        }
+        .view.active {
+            display: block;
+        }
+
+        /* Auth view */
+        #auth-view {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(100vh - 80px);
+        }
+        .auth-container {
+            display: grid;
+            grid-template-columns: minmax(0,1.3fr) minmax(0,1.1fr);
+            gap: 2.5rem;
+            max-width: 980px;
+            width: 100%;
+            padding: 2rem;
+            border-radius: 18px;
+            border: 1px solid rgba(148,163,184,0.3);
+            background: radial-gradient(circle at top left, rgba(56,189,248,0.15), transparent 55%),
+                        radial-gradient(circle at bottom right, rgba(234,179,8,0.10), transparent 60%),
+                        rgba(15,23,42,0.9);
+            box-shadow: 0 20px 60px rgba(15,23,42,0.7);
+            backdrop-filter: blur(18px);
+        }
+        .auth-left h2 {
+            font-size: 1.9rem;
+            margin-bottom: 0.75rem;
+        }
+        .auth-left p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+        .highlight-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.2rem 0.8rem;
+            font-size: 0.75rem;
+            border-radius: 999px;
+            background: rgba(15,23,42,0.9);
+            border: 1px solid rgba(148,163,184,0.4);
+            margin-bottom: 1.4rem;
+        }
+        .spark {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: var(--accent);
+            box-shadow: 0 0 12px rgba(56,189,248,0.9);
+        }
+        .auth-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0,1fr));
+            gap: 0.75rem;
+        }
+        .metric-card {
+            padding: 0.75rem;
+            border-radius: 12px;
+            border: 1px solid rgba(148,163,184,0.4);
+            background: radial-gradient(circle at top, rgba(56,189,248,0.12), transparent 60%);
+        }
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .metric-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .auth-right {
+            background: radial-gradient(circle at top right, rgba(56,189,248,0.16), transparent 60%),
+                        radial-gradient(circle at bottom left, rgba(34,197,94,0.18), transparent 55%),
+                        rgba(15,23,42,0.95);
+            border-radius: 14px;
+            border: 1px solid rgba(148,163,184,0.35);
+            padding: 1.25rem 1.4rem 1.4rem;
+            box-shadow: 0 12px 40px rgba(15,23,42,0.7);
+        }
+        .tabs {
+            display: flex;
+            border-radius: 999px;
+            padding: 0.2rem;
+            background: rgba(15,23,42,0.9);
+            border: 1px solid rgba(148,163,184,0.5);
+            margin-bottom: 1rem;
+        }
+        .tab-btn {
+            flex: 1;
+            font-size: 0.85rem;
+            padding: 0.35rem 0.2rem;
+            border-radius: 999px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            color: #0f172a;
+            font-weight: 600;
+            box-shadow: 0 6px 20px rgba(56,189,248,0.6);
+        }
+
+        .field-group {
+            margin-bottom: 0.6rem;
+        }
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 0.2rem;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 0.4rem 0.5rem;
+            border-radius: 8px;
+            border: 1px solid rgba(148,163,184,0.7);
+            background: rgba(15,23,42,0.9);
+            color: var(--text-main);
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px rgba(56,189,248,0.7);
+        }
+
+        button {
+            font-family: inherit;
+            font-size: 0.9rem;
+            border-radius: 999px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            color: #0f172a;
+            padding: 0.5rem 0.9rem;
+            box-shadow: 0 10px 25px rgba(56,189,248,0.5);
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 32px rgba(56,189,248,0.7);
+        }
+        .btn-secondary {
+            background: rgba(15,23,42,0.9);
+            color: var(--text-muted);
+            padding: 0.5rem 0.9rem;
+            border: 1px solid rgba(148,163,184,0.8);
+        }
+        .btn-secondary:hover {
+            background: rgba(31,41,55,0.9);
+            color: var(--text-main);
+        }
+        .btn-outline {
+            background: transparent;
+            color: var(--accent);
+            padding: 0.35rem 0.8rem;
+            border: 1px solid rgba(148,163,184,0.7);
+        }
+        .btn-outline:hover {
+            background: rgba(15,23,42,0.9);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #f97373, var(--danger));
+            color: #0f172a;
+            padding: 0.4rem 0.8rem;
+        }
+        .btn-block {
+            width: 100%;
+            margin-top: 0.4rem;
+        }
+
+        .message {
+            margin-top: 0.35rem;
+            font-size: 0.78rem;
+        }
+        .message-error { color: var(--danger); }
+        .message-success { color: var(--success); }
+        .message-info { color: var(--accent); }
+        .small-muted {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        /* DASHBOARD */
+        #dashboard-view {
+            animation: fadeIn 0.5s ease-out;
+        }
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .dashboard-header h2 {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+        .dashboard-header span {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+        .dashboard-header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .role-pill {
+            padding: 0.2rem 0.6rem;
+            font-size: 0.75rem;
+            border-radius: 999px;
+            border: 1px solid rgba(148,163,184,0.7);
+            background: rgba(15,23,42,0.9);
+        }
+
+        .layout-dashboard {
+            display: grid;
+            grid-template-columns: minmax(0,1.8fr) minmax(0,1.2fr);
+            gap: 1rem;
+        }
+        .card {
+            background: linear-gradient(145deg, rgba(15,23,42,0.95), rgba(15,23,42,0.85));
+            border-radius: 14px;
+            border: 1px solid rgba(148,163,184,0.35);
+            padding: 0.9rem 1rem;
+            box-shadow: 0 14px 32px rgba(15,23,42,0.7);
+        }
+        .card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 45px rgba(15,23,42,0.9);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 0.45rem;
+        }
+        .card-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .card-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0,1fr));
+            gap: 0.5rem;
+            align-items: end;
+        }
+        .filters-actions {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .table-container {
+            margin-top: 0.6rem;
+            border-radius: 10px;
+            border: 1px solid rgba(51,65,85,0.8);
+            overflow: hidden;
+            max-height: 550px;
+            overflow-y: auto;
+            background: rgba(15,23,42,0.98);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        thead {
+            background: linear-gradient(to right, rgba(15,23,42,0.96), rgba(30,64,175,0.96));
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        th, td {
+            padding: 0.35rem 0.5rem;
+            border-bottom: 1px solid rgba(31,41,55,0.9);
+            text-align: left;
+            white-space: nowrap;
+        }
+        tbody tr:nth-child(even) td {
+            background: rgba(15,23,42,0.96);
+        }
+        tbody tr:hover td {
+            background: rgba(30,64,175,0.35);
+        }
+        th.sortable {
+            cursor: pointer;
+        }
+        th.sortable span {
+            opacity: 0.4;
+            margin-left: 0.25rem;
+            font-size: 0.65rem;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 0.35rem;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.45rem;
+            font-size: 0.78rem;
+        }
+
+        .row {
+            display: flex;
+            gap: 0.7rem;
+        }
+        .row > .col {
+            flex: 1;
+        }
+
+        canvas {
+            width: 100% !important;
+            max-height: 220px;
+        }
+
+        .admin-only {
+            display: none;
+        }
+        .admin-visible {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 1024px) {
+            main { padding: 1rem; }
+            .auth-container {
+                grid-template-columns: minmax(0,1fr);
+            }
+            .layout-dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 768px) {
+            header { padding: 0.75rem 1rem; }
+            main { padding: 0.75rem 1rem 2rem; }
+            .filters-grid {
+                grid-template-columns: repeat(2, minmax(0,1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <div class="logo-circle"></div>
+        <div>
+            <h1>EcoTrack</h1>
+            <p>Indicateurs environnementaux & qualité de l’air</p>
+        </div>
+    </div>
+    <div class="right" id="auth-status">
+        <span class="badge badge-secondary">Non authentifié</span>
+    </div>
+</header>
+
+<main>
+    <!-- VUE AUTHENTIFICATION -->
+    <section id="auth-view" class="view active">
+        <div class="auth-container">
+            <div class="auth-left">
+                <div class="highlight-pill">
+                    <div class="spark"></div>
+                    <span>Plateforme pédagogique</span>
+                    <span style="color: var(--accent);">API + Front intégré</span>
+                </div>
+                <h2>Connecte-toi pour explorer les indicateurs.</h2>
+                <p>
+                    EcoTrack te permet de visualiser, filtrer et analyser des indicateurs
+                    environnementaux importés depuis des jeux de données réels.
+                    Le rôle <strong>user</strong> donne accès à la visualisation, le rôle
+                    <strong>admin</strong> débloque la gestion avancée et les tests d’API.
+                </p>
+                <div class="auth-metrics">
+                    <div class="metric-card">
+                        <div class="metric-label">Types d’indicateurs</div>
+                        <div class="metric-value" id="metric-types">–</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Mesures importées</div>
+                        <div class="metric-value" id="metric-count">–</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Qualité de l’air</div>
+                        <div class="metric-value">FR</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="auth-right">
+                <div class="tabs">
+                    <button class="tab-btn active" id="tab-login">Connexion</button>
+                    <button class="tab-btn" id="tab-register">Inscription</button>
+                </div>
+
+                <!-- Formulaire connexion -->
+                <form id="login-form">
+                    <div class="field-group">
+                        <label for="login-email">Email</label>
+                        <input type="email" id="login-email" required>
+                    </div>
+                    <div class="field-group">
+                        <label for="login-password">Mot de passe</label>
+                        <input type="password" id="login-password" minlength="6" required>
+                    </div>
+                    <button type="submit" class="btn-primary btn-block">Se connecter</button>
+                    <div id="login-message" class="message"></div>
+                    <p class="small-muted" style="margin-top:0.5rem;">
+                        La connexion consomme l’endpoint <code>/login</code>, puis <code>/me</code> pour récupérer ton rôle.
+                    </p>
+                </form>
+
+                <!-- Formulaire inscription -->
+                <form id="register-form" style="display:none;">
+                    <div class="field-group">
+                        <label for="register-email">Email</label>
+                        <input type="email" id="register-email" required>
+                    </div>
+                    <div class="field-group">
+                        <label for="register-password">Mot de passe</label>
+                        <input type="password" id="register-password" minlength="6" required>
+                    </div>
+                    <div class="field-group">
+                        <label for="register-role">Rôle</label>
+                        <select id="register-role">
+                            <option value="user" selected>Utilisateur</option>
+                            <option value="admin">Administrateur</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-secondary btn-block">Créer un compte</button>
+                    <div id="register-message" class="message"></div>
+                    <p class="small-muted" style="margin-top:0.5rem;">
+                        L’inscription consomme l’endpoint <code>/register</code>
+                        en enregistrant le rôle (user/admin).
+                    </p>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- VUE DASHBOARD (USER + ADMIN) -->
+    <section id="dashboard-view" class="view">
+        <div class="dashboard-header">
+            <div>
+                <h2 id="dashboard-title">Tableau de bord</h2>
+                <span id="dashboard-subtitle">Consultation des indicateurs.</span>
+            </div>
+            <div class="dashboard-header-right">
+                <div class="role-pill" id="role-pill">Rôle : inconnu</div>
+                <button id="logout-btn" class="btn-secondary">Déconnexion</button>
+            </div>
+        </div>
+
+        <div class="layout-dashboard">
+            <!-- Colonne gauche : recherche / tableau -->
+            <div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Données & filtres</div>
+                        <div class="card-subtitle">Recherche, filtres et pagination sur les indicateurs importés.</div>
+                    </div>
+
+                    <form id="filters-form">
+                        <div class="filters-grid">
+                            <div class="field-group">
+                                <label for="filter-type">Type</label>
+                                <input type="text" id="filter-type" placeholder="NO2, PM10, atmo_index…">
+                            </div>
+                            <div class="field-group">
+                                <label for="filter-zone-id">Zone ID</label>
+                                <input type="number" id="filter-zone-id">
+                            </div>
+                            <div class="field-group">
+                                <label for="filter-source-id">Source ID</label>
+                                <input type="number" id="filter-source-id">
+                            </div>
+                            <div class="field-group">
+                                <label for="filter-text">Recherche textuelle</label>
+                                <input type="text" id="filter-text" placeholder="recherche dans infos / type…">
+                            </div>
+                        </div>
+                        <div class="filters-grid" style="margin-top:0.5rem;">
+                            <div class="field-group">
+                                <label for="filter-date-from">Date début</label>
+                                <input type="datetime-local" id="filter-date-from">
+                            </div>
+                            <div class="field-group">
+                                <label for="filter-date-to">Date fin</label>
+                                <input type="datetime-local" id="filter-date-to">
+                            </div>
+                            <div class="field-group">
+                                <label for="filter-limit">Taille de page</label>
+                                <input type="number" id="filter-limit" value="20" min="5" max="200">
+                            </div>
+                            <div class="field-group filters-actions">
+                                <button type="submit" class="btn-outline btn-block">Rechercher</button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div id="filters-message" class="message"></div>
+
+                    <div class="table-container">
+                        <table id="indicators-table">
+                            <thead>
+                            <tr>
+                                <th class="sortable" data-sort="id">ID <span>⇅</span></th>
+                                <th class="sortable" data-sort="source_id">Source</th>
+                                <th class="sortable" data-sort="zone_id">Zone</th>
+                                <th class="sortable" data-sort="type">Type</th>
+                                <th class="sortable" data-sort="value">Valeur</th>
+                                <th>Unité</th>
+                                <th class="sortable" data-sort="timestamp">Date</th>
+                                <th>Infos</th>
+                                <th>Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <!-- Lignes injectées ici -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination">
+                        <div>
+                            <button id="prev-page" class="btn-outline" type="button">Page précédente</button>
+                            <button id="next-page" class="btn-outline" type="button">Page suivante</button>
+                        </div>
+                        <div>
+                            <span class="small-muted" id="pagination-info">Page 1</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gestion des indicateurs (ADMIN ONLY) -->
+                <div class="card admin-only" id="admin-indicator-card" style="margin-top:0.9rem;">
+                    <div class="card-header">
+                        <div class="card-title">Gestion des indicateurs</div>
+                        <div class="card-subtitle">Création, modification et suppression (réservé aux administrateurs).</div>
+                    </div>
+
+                    <form id="indicator-form">
+                        <div class="row">
+                            <div class="col">
+                                <div class="field-group">
+                                    <label for="ind-id">ID (pour modifier / supprimer)</label>
+                                    <input type="number" id="ind-id" placeholder="laissé vide pour créer">
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="field-group">
+                                    <label for="ind-source-id">Source ID</label>
+                                    <input type="number" id="ind-source-id" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col">
+                                <div class="field-group">
+                                    <label for="ind-zone-id">Zone ID</label>
+                                    <input type="number" id="ind-zone-id" required>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="field-group">
+                                    <label for="ind-type">Type</label>
+                                    <input type="text" id="ind-type" placeholder="NO2, PM10, atmo_index…" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col">
+                                <div class="field-group">
+                                    <label for="ind-value">Valeur</label>
+                                    <input type="number" step="0.01" id="ind-value" required>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="field-group">
+                                    <label for="ind-unit">Unité</label>
+                                    <input type="text" id="ind-unit" placeholder="µg/m³, index…">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="ind-timestamp">Date / heure</label>
+                            <input type="datetime-local" id="ind-timestamp" required>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="ind-extra">Informations supplémentaires</label>
+                            <textarea id="ind-extra" placeholder="extra_metadata (texte libre)"></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col">
+                                <button type="submit" class="btn-primary btn-block">Créer / Mettre à jour</button>
+                            </div>
+                            <div class="col">
+                                <button type="button" id="delete-indicator-btn" class="btn-danger btn-block">Supprimer</button>
+                            </div>
+                        </div>
+
+                        <div id="indicator-message" class="message"></div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Colonne droite : statistiques + tests admin -->
+            <div>
+                <!-- Statistiques & graphique -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Statistiques & tendances</div>
+                        <div class="card-subtitle">
+                            Liste des types d’indicateurs disponibles + courbe des valeurs dans le temps.
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="stats-type-select">Indicateur</label>
+                        <select id="stats-type-select">
+                            <option value="">Choisir un type…</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="field-group">
+                                <label for="stats-zone-id">Zone ID (optionnel)</label>
+                                <input type="number" id="stats-zone-id">
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="field-group">
+                                <label for="stats-limit">Nb mesures max</label>
+                                <input type="number" id="stats-limit" value="200" min="10" max="1000">
+                            </div>
+                        </div>
+                    </div>
+                    <button id="stats-refresh-btn" class="btn-outline btn-block" type="button">Mettre à jour le graphique</button>
+                    <div id="stats-message" class="message"></div>
+
+                    <canvas id="stats-chart"></canvas>
+                </div>
+
+                <!-- Tests API (ADMIN ONLY) -->
+                <div class="card admin-only" id="admin-tests-card" style="margin-top:0.9rem;">
+                    <div class="card-header">
+                        <div class="card-title">Tests & qualité de l’API</div>
+                        <div class="card-subtitle">
+                            Tests d’intégration des endpoints (création utilisateur, login, création/édition d’indicateur).
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <button type="button" class="btn-outline btn-block" id="test-register-btn">
+                            Tester création d’utilisateur (POST /register)
+                        </button>
+                    </div>
+                    <div class="field-group">
+                        <button type="button" class="btn-outline btn-block" id="test-login-fail-btn">
+                            Tester login en erreur (mauvais mot de passe)
+                        </button>
+                    </div>
+                    <div class="field-group">
+                        <button type="button" class="btn-outline btn-block" id="test-create-indicator-btn">
+                            Tester création d’indicateur (POST /api/indicators)
+                        </button>
+                    </div>
+                    <div class="field-group">
+                        <button type="button" class="btn-outline btn-block" id="test-update-delete-indicator-btn">
+                            Tester modification & suppression d’indicateur (PUT + DELETE)
+                        </button>
+                    </div>
+
+                    <div id="tests-log" class="message" style="max-height: 140px; overflow-y:auto;"></div>
+
+<div id="tests-response"
+    class="message"
+    style="margin-top:0.5rem; white-space:pre-wrap; font-family:monospace; font-size:0.75rem; max-height:160px; overflow-y:auto;">
+</div>
+
+<button type="button" id="open-swagger-btn" class="btn-outline btn-block" style="margin-top:0.6rem;">
+    Ouvrir la documentation Swagger (/docs)
+</button>
+
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script>
+    let accessToken = null;
+    let currentUser = null;
+    let currentPage = 1;
+    let currentSort = { field: "id", direction: "asc" };
+    let lastFilters = {};
+    let chartInstance = null;
+    let lastTestIndicatorId = null;
+
+    function setView(view) {
+        document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+        document.getElementById(view).classList.add("active");
+    }
+
+    function setMessage(elementId, text, type) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        el.textContent = text || "";
+        el.className = "message";
+        if (!text) return;
+        if (type === "error") el.classList.add("message-error");
+        if (type === "success") el.classList.add("message-success");
+        if (type === "info") el.classList.add("message-info");
+    }
+
+    function setAuthStatus(connected, email = null, role = null) {
+        const status = document.getElementById("auth-status");
+        if (!connected) {
+            status.innerHTML = '<span class="badge badge-secondary">Non authentifié</span>';
+        } else {
+            let html = '<span class="badge badge-success">Connecté</span>';
+            if (email) html += '<br><span class="small-muted">' + email + '</span>';
+            if (role) html += '<br><span class="small-muted">Rôle : ' + role + '</span>';
+            status.innerHTML = html;
+        }
+    }
+
+    function updateDashboardRoleUI() {
+        if (!currentUser) return;
+        const role = currentUser.role;
+        const title = document.getElementById("dashboard-title");
+        const subtitle = document.getElementById("dashboard-subtitle");
+        const rolePill = document.getElementById("role-pill");
+
+        if (role === "admin") {
+            title.textContent = "Tableau de bord administrateur";
+            subtitle.textContent = "Consultation, statistiques, gestion des indicateurs et tests d’API.";
+            rolePill.textContent = "Rôle : admin";
+            document.querySelectorAll(".admin-only").forEach(el => el.classList.add("admin-visible"));
+        } else {
+            title.textContent = "Tableau de bord utilisateur";
+            subtitle.textContent = "Consultation, filtres et statistiques des indicateurs.";
+            rolePill.textContent = "Rôle : user";
+            document.querySelectorAll(".admin-only").forEach(el => el.classList.remove("admin-visible"));
+        }
+    }
+
+    function getAuthHeaders(extra = {}) {
+        const headers = { ...extra };
+        if (accessToken) {
+            headers["Authorization"] = "Bearer " + accessToken;
+        }
+        return headers;
+    }
+
+    async function safeJson(resp) {
+        try {
+            const text = await resp.text();
+            if (!text) return null;
+            return JSON.parse(text);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // --- Tabs auth ---
+    document.getElementById("tab-login").addEventListener("click", () => {
+        document.getElementById("tab-login").classList.add("active");
+        document.getElementById("tab-register").classList.remove("active");
+        document.getElementById("login-form").style.display = "";
+        document.getElementById("register-form").style.display = "none";
+    });
+
+    document.getElementById("tab-register").addEventListener("click", () => {
+        document.getElementById("tab-register").classList.add("active");
+        document.getElementById("tab-login").classList.remove("active");
+        document.getElementById("login-form").style.display = "none";
+        document.getElementById("register-form").style.display = "";
+    });
+
+    // ---------- INSCRIPTION ----------
+    document.getElementById("register-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("register-email").value;
+        const password = document.getElementById("register-password").value;
+        const role = document.getElementById("register-role").value;
+        setMessage("register-message", "", "");
+
+        try {
+            const resp = await fetch("/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password, role })
+            });
+            const data = await safeJson(resp);
+            if (!resp.ok) {
+                setMessage("register-message", (data && data.detail) || "Erreur lors de l'inscription.", "error");
+                return;
+            }
+            setMessage("register-message", "Compte créé. Vous pouvez maintenant vous connecter.", "success");
+        } catch (err) {
+            console.error(err);
+            setMessage("register-message", "Erreur réseau lors de l'inscription.", "error");
+        }
+    });
+
+    // ---------- CONNEXION ----------
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("login-email").value;
+        const password = document.getElementById("login-password").value;
+        setMessage("login-message", "", "");
+
+        const formData = new URLSearchParams();
+        formData.append("username", email);
+        formData.append("password", password);
+
+        try {
+            const resp = await fetch("/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: formData.toString()
+            });
+            const data = await safeJson(resp);
+            if (!resp.ok) {
+                setMessage("login-message", (data && data.detail) || "Connexion refusée.", "error");
+                setAuthStatus(false);
+                return;
+            }
+            accessToken = data.access_token || null;
+            if (!accessToken) {
+                setMessage("login-message", "Token non reçu. Vérifier l'API /login.", "error");
+                setAuthStatus(false);
+                return;
+            }
+
+            const meResp = await fetch("/me", { headers: getAuthHeaders() });
+            if (meResp.ok) {
+                const me = await safeJson(meResp);
+                currentUser = me;
+                setAuthStatus(true, me && me.email, me && me.role);
+                updateDashboardRoleUI();
+                setView("dashboard-view");
+                await loadIndicators(true);
+                await populateStatsTypes();
+            } else {
+                setAuthStatus(true, email, null);
+                setView("dashboard-view");
+            }
+
+            setMessage("login-message", "Connexion réussie.", "success");
+        } catch (err) {
+            console.error(err);
+            setMessage("login-message", "Erreur réseau lors de la connexion.", "error");
+            setAuthStatus(false);
+        }
+    });
+
+    // Déconnexion
+    document.getElementById("logout-btn").addEventListener("click", () => {
+        accessToken = null;
+        currentUser = null;
+        setAuthStatus(false);
+        setView("auth-view");
+    });
+
+    // ---------- FILTRES / PAGINATION / TABLEAU ----------
+    document.getElementById("filters-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        currentPage = 1;
+        await loadIndicators(true);
+    });
+
+    document.getElementById("prev-page").addEventListener("click", async () => {
+        if (currentPage > 1) {
+            currentPage -= 1;
+            await loadIndicators(false);
+        }
+    });
+
+    document.getElementById("next-page").addEventListener("click", async () => {
+        currentPage += 1;
+        await loadIndicators(false);
+    });
+
+    async function loadIndicators(resetFilters = false) {
+        setMessage("filters-message", "", "");
+        const limit = Number(document.getElementById("filter-limit").value) || 20;
+
+        if (resetFilters) {
+            lastFilters = {
+                type: document.getElementById("filter-type").value.trim(),
+                zone_id: document.getElementById("filter-zone-id").value,
+                source_id: document.getElementById("filter-source-id").value,
+                text: document.getElementById("filter-text").value.trim(),
+                date_from: document.getElementById("filter-date-from").value,
+                date_to: document.getElementById("filter-date-to").value,
+                limit: limit
+            };
+        }
+
+        const params = new URLSearchParams();
+        if (lastFilters.type) params.append("type", lastFilters.type);
+        if (lastFilters.zone_id) params.append("zone_id", lastFilters.zone_id);
+        if (lastFilters.source_id) params.append("source_id", lastFilters.source_id);
+        if (lastFilters.date_from) params.append("date_from", lastFilters.date_from);
+        if (lastFilters.date_to) params.append("date_to", lastFilters.date_to);
+        params.append("limit", lastFilters.limit);
+        params.append("skip", (currentPage - 1) * lastFilters.limit);
+
+        try {
+            const resp = await fetch("/api/indicators?" + params.toString(), {
+                headers: getAuthHeaders()
+            });
+            const data = await safeJson(resp);
+            if (!resp.ok) {
+                setMessage("filters-message", (data && data.detail) || "Erreur lors de la récupération des indicateurs.", "error");
+                return;
+            }
+            let list = Array.isArray(data) ? data : [];
+            // Recherche textuelle côté front si besoin
+            if (lastFilters.text) {
+                const q = lastFilters.text.toLowerCase();
+                list = list.filter(ind =>
+                    (ind.type && String(ind.type).toLowerCase().includes(q)) ||
+                    (ind.extra_metadata && String(ind.extra_metadata).toLowerCase().includes(q)) ||
+                    (ind.unit && String(ind.unit).toLowerCase().includes(q))
+                );
+            }
+            // Tri
+            list.sort((a, b) => {
+                const field = currentSort.field;
+                let va = a[field];
+                let vb = b[field];
+
+                if (field === "timestamp") {
+                    va = va ? new Date(va).getTime() : 0;
+                    vb = vb ? new Date(vb).getTime() : 0;
+                }
+                if (typeof va === "string") va = va.toLowerCase();
+                if (typeof vb === "string") vb = vb.toLowerCase();
+
+                if (va < vb) return currentSort.direction === "asc" ? -1 : 1;
+                if (va > vb) return currentSort.direction === "asc" ? 1 : -1;
+                return 0;
+            });
+
+            renderIndicatorsTable(list);
+            document.getElementById("pagination-info").textContent =
+                "Page " + currentPage + " – " + list.length + " lignes sur cette page";
+
+            // Mise à jour des petites métriques dans la vue auth
+            document.getElementById("metric-count").textContent = (list.length > 0 ? "~" + (currentPage * lastFilters.limit) : "–");
+            const typesSet = new Set(list.map(i => i.type));
+            document.getElementById("metric-types").textContent = typesSet.size || "–";
+        } catch (err) {
+            console.error(err);
+            setMessage("filters-message", "Erreur réseau lors du chargement des indicateurs.", "error");
+        }
+    }
+
+    function renderIndicatorsTable(list) {
+        const tbody = document.querySelector("#indicators-table tbody");
+        tbody.innerHTML = "";
+        if (!Array.isArray(list) || list.length === 0) {
+            setMessage("filters-message", "Aucun indicateur trouvé pour ces filtres.", "info");
+            return;
+        }
+
+        const isAdmin = currentUser && currentUser.role === "admin";
+
+        list.forEach(ind => {
+            const tr = document.createElement("tr");
+            const dateStr = ind.timestamp ? new Date(ind.timestamp).toLocaleString() : "";
+            tr.innerHTML = `
+                <td>${ind.id}</td>
+                <td>${ind.source_id}</td>
+                <td>${ind.zone_id}</td>
+                <td>${ind.type}</td>
+                <td>${ind.value}</td>
+                <td>${ind.unit || ""}</td>
+                <td>${dateStr}</td>
+                <td>${ind.extra_metadata || ""}</td>
+                <td>
+                    <div class="table-actions">
+                        <button type="button" class="btn-outline btn-sm" data-action="chart" data-id="${ind.id}">Graph</button>
+                        ${isAdmin ? `<button type="button" class="btn-outline btn-sm" data-action="edit" data-id="${ind.id}">Éditer</button>` : ""}
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        tbody.querySelectorAll("button[data-action='edit']").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const id = btn.getAttribute("data-id");
+                const item = list.find(x => String(x.id) === String(id));
+                if (!item) return;
+                document.getElementById("ind-id").value = item.id;
+                document.getElementById("ind-source-id").value = item.source_id;
+                document.getElementById("ind-zone-id").value = item.zone_id;
+                document.getElementById("ind-type").value = item.type;
+                document.getElementById("ind-value").value = item.value;
+                document.getElementById("ind-unit").value = item.unit || "";
+                if (item.timestamp) {
+                    const iso = new Date(item.timestamp).toISOString().slice(0, 16);
+                    document.getElementById("ind-timestamp").value = iso;
+                }
+                document.getElementById("ind-extra").value = item.extra_metadata || "";
+                setMessage("indicator-message", "Indicateur chargé dans le formulaire pour modification.", "info");
+            });
+        });
+
+        tbody.querySelectorAll("button[data-action='chart']").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const item = list.find(x => String(x.id) === String(btn.getAttribute("data-id")));
+                if (!item) return;
+                const select = document.getElementById("stats-type-select");
+                if (item.type && !Array.from(select.options).some(o => o.value === item.type)) {
+                    const opt = document.createElement("option");
+                    opt.value = item.type;
+                    opt.textContent = item.type;
+                    select.appendChild(opt);
+                }
+                select.value = item.type;
+                document.getElementById("stats-zone-id").value = item.zone_id;
+                updateStatsChart();
+            });
+        });
+
+        setMessage("filters-message", "Indicateurs chargés (" + list.length + " lignes).", "success");
+    }
+
+    // Tri sur les headers
+    document.querySelectorAll("th.sortable").forEach(th => {
+        th.addEventListener("click", async () => {
+            const field = th.getAttribute("data-sort");
+            if (!field) return;
+            if (currentSort.field === field) {
+                currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
+            } else {
+                currentSort.field = field;
+                currentSort.direction = "asc";
+            }
+            await loadIndicators(false);
+        });
+    });
+
+    // ---------- STATISTIQUES & GRAPH ----------
+    document.getElementById("stats-refresh-btn").addEventListener("click", updateStatsChart);
+
+    async function populateStatsTypes() {
+        const params = new URLSearchParams();
+        params.append("limit", "400");
+        params.append("skip", "0");
+        try {
+            const resp = await fetch("/api/indicators?" + params.toString(), {
+                headers: getAuthHeaders()
+            });
+            const data = await safeJson(resp);
+            if (!resp.ok) return;
+            const list = Array.isArray(data) ? data : [];
+            const types = Array.from(new Set(list.map(i => i.type).filter(Boolean))).sort();
+            const select = document.getElementById("stats-type-select");
+            select.innerHTML = '<option value="">Choisir un type…</option>';
+            types.forEach(t => {
+                const opt = document.createElement("option");
+                opt.value = t;
+                opt.textContent = t;
+                select.appendChild(opt);
+            });
+            document.getElementById("metric-types").textContent = types.length || "–";
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function updateStatsChart() {
+        const type = document.getElementById("stats-type-select").value;
+        const zoneId = document.getElementById("stats-zone-id").value;
+        const limit = document.getElementById("stats-limit").value || "200";
+        setMessage("stats-message", "", "");
+
+        if (!type) {
+            setMessage("stats-message", "Choisissez un type d’indicateur.", "info");
+            return;
+        }
+
+        const params = new URLSearchParams();
+        params.append("type", type);
+        if (zoneId) params.append("zone_id", zoneId);
+        params.append("limit", limit);
+        params.append("skip", "0");
+
+        try {
+            const resp = await fetch("/api/indicators?" + params.toString(), {
+                headers: getAuthHeaders()
+            });
+            const data = await safeJson(resp);
+            if (!resp.ok) {
+                setMessage("stats-message", (data && data.detail) || "Erreur lors de la récupération des données.", "error");
+                return;
+            }
+            const list = (Array.isArray(data) ? data : []).filter(d => d.timestamp && d.value != null);
+            if (list.length === 0) {
+                setMessage("stats-message", "Aucune donnée trouvée pour ce type / cette zone.", "info");
+                if (chartInstance) chartInstance.destroy();
+                return;
+            }
+
+            list.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            const labels = list.map(d => new Date(d.timestamp).toLocaleString());
+            const values = list.map(d => d.value);
+
+            const ctx = document.getElementById("stats-chart").getContext("2d");
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: type + (zoneId ? " (zone " + zoneId + ")" : ""),
+                        data: values,
+                        tension: 0.25
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { ticks: { maxTicksLimit: 6 } }
+                    }
+                }
+            });
+
+            setMessage("stats-message", "Graphique mis à jour (" + list.length + " points).", "success");
+        } catch (err) {
+            console.error(err);
+            setMessage("stats-message", "Erreur réseau lors du calcul des statistiques.", "error");
+        }
+    }
+
+    // ---------- ADMIN : CRUD INDICATEUR ----------
+    document.getElementById("indicator-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        setMessage("indicator-message", "", "");
+
+        const id = document.getElementById("ind-id").value;
+        const source_id = Number(document.getElementById("ind-source-id").value);
+        const zone_id = Number(document.getElementById("ind-zone-id").value);
+        const type = document.getElementById("ind-type").value;
+        const value = Number(document.getElementById("ind-value").value);
+        const unit = document.getElementById("ind-unit").value || null;
+        const timestamp = document.getElementById("ind-timestamp").value;
+        const extra_metadata = document.getElementById("ind-extra").value || null;
+
+        if (!source_id || !zone_id || !type || !timestamp || Number.isNaN(value)) {
+            setMessage("indicator-message", "Tous les champs obligatoires doivent être remplis.", "error");
+            return;
+        }
+
+        const payload = { source_id, zone_id, type, value, unit, timestamp, extra_metadata };
+        let url = "/api/indicators";
+        let method = "POST";
+        if (id) {
+            url = "/api/indicators/" + id;
+            method = "PUT";
+        }
+
+        try {
+            const resp = await fetch(url, {
+                method,
+                headers: getAuthHeaders({ "Content-Type": "application/json" }),
+                body: JSON.stringify(payload)
+            });
+            const data = await safeJson(resp);
+            if (!resp.ok) {
+                setMessage("indicator-message", (data && data.detail) || "Erreur lors de l'enregistrement.", "error");
+                return;
+            }
+            if (id) {
+                setMessage("indicator-message", "Indicateur mis à jour (ID " + data.id + ").", "success");
+            } else {
+                setMessage("indicator-message", "Indicateur créé (ID " + data.id + ").", "success");
+                document.getElementById("ind-id").value = data.id;
+            }
+            await loadIndicators(false);
+            await updateStatsChart();
+        } catch (err) {
+            console.error(err);
+            setMessage("indicator-message", "Erreur réseau lors de l'enregistrement.", "error");
+        }
+    });
+
+    document.getElementById("delete-indicator-btn").addEventListener("click", async () => {
+        setMessage("indicator-message", "", "");
+        const id = document.getElementById("ind-id").value;
+        if (!id) {
+            setMessage("indicator-message", "Renseigne l’ID de l’indicateur à supprimer.", "error");
+            return;
+        }
+        if (!confirm("Supprimer l’indicateur " + id + " ?")) return;
+
+        try {
+            const resp = await fetch("/api/indicators/" + id, {
+                method: "DELETE",
+                headers: getAuthHeaders()
+            });
+            if (!resp.ok && resp.status !== 204) {
+                const data = await safeJson(resp);
+                setMessage("indicator-message", (data && data.detail) || "Erreur lors de la suppression.", "error");
+                return;
+            }
+            setMessage("indicator-message", "Indicateur " + id + " supprimé.", "success");
+            document.getElementById("ind-id").value = "";
+            await loadIndicators(false);
+            await updateStatsChart();
+        } catch (err) {
+            console.error(err);
+            setMessage("indicator-message", "Erreur réseau lors de la suppression.", "error");
+        }
+    });
+
+    // ---------- ADMIN : TESTS D’API ----------
+    function logTest(message, ok = true) {
+        const log = document.getElementById("tests-log");
+        const line = document.createElement("div");
+        line.textContent = (ok ? "✔ " : "✖ ") + message;
+        line.style.color = ok ? "var(--success)" : "var(--danger)";
+        log.prepend(line);
+    }
+
+   document.getElementById("test-register-btn").addEventListener("click", async () => {
+    const email = "test+" + Date.now() + "@example.com";
+    const payload = { email, password: "Test1234!", role: "user" };
+    try {
+        const resp = await fetch("/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await safeJson(resp);
+        showTestResponse(data);
+        if (resp.ok) {
+            logTest("Création utilisateur OK (" + email + ")", true);
+        } else {
+            logTest("Création utilisateur KO (" + (data && data.detail) + ")", false);
+        }
+    } catch (err) {
+        console.error(err);
+        logTest("Erreur réseau lors de la création utilisateur", false);
+        showTestResponse({ error: String(err) });
+    }
+});
+
+   document.getElementById("test-login-fail-btn").addEventListener("click", async () => {
+    const formData = new URLSearchParams();
+    formData.append("username", "fake@example.com");
+    formData.append("password", "wrong");
+    try {
+        const resp = await fetch("/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: formData.toString()
+        });
+        const data = await safeJson(resp);
+        showTestResponse(data);
+        if (!resp.ok) {
+            logTest("Login incorrect renvoie bien une erreur (status " + resp.status + ")", true);
+        } else {
+            logTest("Login incorrect n’a pas renvoyé d’erreur", false);
+        }
+    } catch (err) {
+        console.error(err);
+        logTest("Erreur réseau lors du test login KO", false);
+        showTestResponse({ error: String(err) });
+    }
+});
+
+   document.getElementById("test-create-indicator-btn").addEventListener("click", async () => {
+    if (!accessToken) {
+        logTest("Impossible de tester création indicateur : non connecté", false);
+        showTestResponse({ error: "Non connecté" });
+        return;
+    }
+    const nowIso = new Date().toISOString().slice(0, 16);
+    const payload = {
+        source_id: 9999,
+        zone_id: 9999,
+        type: "TEST_INDICATOR",
+        value: 42.0,
+        unit: "unit",
+        timestamp: nowIso,
+        extra_metadata: "test creation"
+    };
+    try {
+        const resp = await fetch("/api/indicators", {
+            method: "POST",
+            headers: getAuthHeaders({ "Content-Type": "application/json" }),
+            body: JSON.stringify(payload)
+        });
+        const data = await safeJson(resp);
+        showTestResponse(data);
+        if (resp.ok && data && data.id) {
+            lastTestIndicatorId = data.id;
+            logTest("Création indicateur OK (ID " + data.id + ")", true);
+        } else {
+            logTest("Création indicateur KO", false);
+        }
+    } catch (err) {
+        console.error(err);
+        logTest("Erreur réseau lors de la création indicateur", false);
+        showTestResponse({ error: String(err) });
+    }
+});
+    document.getElementById("test-update-delete-indicator-btn").addEventListener("click", async () => {
+    if (!accessToken) {
+        logTest("Impossible de tester update/delete : non connecté", false);
+        showTestResponse({ error: "Non connecté" });
+        return;
+    }
+    if (!lastTestIndicatorId) {
+        logTest("Aucun indicateur de test connu. Lance d’abord la création d’indicateur.", false);
+        showTestResponse({ error: "Aucun ID de test (crée un indicateur d'abord)" });
+        return;
+    }
+    try {
+        const nowIso = new Date().toISOString().slice(0, 16);
+        const payload = {
+            source_id: 9999,
+            zone_id: 9999,
+            type: "TEST_INDICATOR_UPDATED",
+            value: 99.9,
+            unit: "unit",
+            timestamp: nowIso,
+            extra_metadata: "test update"
+        };
+        const respUpdate = await fetch("/api/indicators/" + lastTestIndicatorId, {
+            method: "PUT",
+            headers: getAuthHeaders({ "Content-Type": "application/json" }),
+            body: JSON.stringify(payload)
+        });
+        const dataUpdate = await safeJson(respUpdate);
+        showTestResponse(dataUpdate);
+        if (respUpdate.ok) {
+            logTest("Mise à jour indicateur OK (ID " + lastTestIndicatorId + ")", true);
+        } else {
+            logTest("Mise à jour indicateur KO (" + (dataUpdate && dataUpdate.detail) + ")", false);
+            return;
+        }
+
+        const respDelete = await fetch("/api/indicators/" + lastTestIndicatorId, {
+            method: "DELETE",
+            headers: getAuthHeaders()
+        });
+        const dataDelete = await safeJson(respDelete);
+        showTestResponse(dataDelete || { status: respDelete.status });
+        if (respDelete.ok || respDelete.status === 204) {
+            logTest("Suppression indicateur OK (ID " + lastTestIndicatorId + ")", true);
+            lastTestIndicatorId = null;
+        } else {
+            logTest("Suppression indicateur KO", false);
+        }
+    } catch (err) {
+        console.error(err);
+        logTest("Erreur réseau lors du test update/delete indicateur", false);
+        showTestResponse({ error: String(err) });
+    }
+});
+function showTestResponse(data) {
+    const el = document.getElementById("tests-response");
+    if (!el) return;
+
+    if (!data) {
+        el.textContent = "";
+        return;
+    }
+    try {
+        el.textContent = JSON.stringify(data, null, 2);
+    } catch (e) {
+        el.textContent = String(data);
+    }
+}
+document.getElementById("open-swagger-btn").addEventListener("click", () => {
+    window.open("/docs", "_blank");
+});
+    // État initial
+    setAuthStatus(false);
+</script>
+
+</body>
+</html>
