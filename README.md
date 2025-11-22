@@ -1,7 +1,9 @@
+# Projet EcoTrack :
+
+est une applicatiion web qui permet d' explorer et gérer des indicateurs environnementaux (qualité de l’air, mesures par zone), avec un front HTML/CSS/JS intégré.
+
 <img width="956" height="478" alt="image" src="https://github.com/user-attachments/assets/3eda7fe7-3689-4b2e-ac96-b9a203dc04ab" />
 
-
-Projet EcoTrack : une API FastAPI pour explorer et gérer des indicateurs environnementaux (qualité de l’air, mesures par zone), avec un front HTML/CSS/JS intégré.
 
 Le projet a été réalisé dans le cadre d’un TP d’API avec les objectifs suivants :
 
@@ -15,8 +17,7 @@ Le projet a été réalisé dans le cadre d’un TP d’API avec les objectifs s
 
 <img width="960" height="477" alt="image" src="https://github.com/user-attachments/assets/7f07d494-dfd9-4038-ad1c-23228b130292" />
 
-## 1. Stack technique
-
+## Stack technique
 - **Langage** : Python 
 - **Framework API** : FastAPI
 - **ORM** : SQLAlchemy
@@ -25,11 +26,7 @@ Le projet a été réalisé dans le cadre d’un TP d’API avec les objectifs s
 - **Base de données** : SQLite
 - **Front** : `index.html` (HTML / CSS / JS vanilla) + Chart.js pour les graphes
 
----
-
-<img width="960" height="457" alt="image" src="https://github.com/user-attachments/assets/d7870b7e-124a-46f7-83e2-fe5d623f5b39" />
-
-## 2. Architecture du projet
+##  Architecture du projet
 
 Organisation des fichiers :
 
@@ -58,3 +55,196 @@ ecotrack-api/
 
   README.md
 
+```
+
+## Fonctionnalités clés
+
+L’application EcoTrack permet de :
+
+Charger des données environnementales depuis des fichiers CSV (qualité de l’air, indicateurs par zone) et les stocker dans une base SQLite.
+
+Exposer une API REST pour consulter ces indicateurs (liste, filtres, pagination).
+
+Sécuriser l’accès via un système d’authentification JWT :
+
+rôle user : consultation et visualisation des données,
+
+rôle admin : gestion complète des indicateurs (création, modification, suppression).
+
+Offrir un front-end web (HTML/CSS/JS) pour :
+
+se connecter / s’inscrire,
+
+explorer les données sous forme de tableau filtrable,
+
+afficher des graphiques d’évolution dans le temps,
+
+administrer les indicateurs (interface admin).
+
+En résumé : les CSV alimentent la base ; l’API expose les données ; le front consomme l’API.
+
+## Rôle des principaux fichiers
+Fichiers back-end (app/)
+
+### app/main.py
+Point d’entrée de l’application :
+
+crée l’instance FastAPI,
+
+monte les routeurs (authentification, indicateurs),
+
+sert le front (GET / renvoie index.html).
+
+### app/database.py
+Gestion de la base de données :
+
+configure l’engine SQLite,
+
+définit SessionLocal (sessions SQLAlchemy),
+
+fournit la dépendance get_db() utilisée dans les endpoints pour accéder à la base.
+
+### app/models.py
+Modèles SQLAlchemy (ORM) :
+
+User : représente un utilisateur (id, email, password_hash, role),
+
+Indicator : représente un indicateur environnemental (source, zone, type, valeur, date, etc.).
+
+### app/schemas.py
+Schémas Pydantic :
+
+structures des données en entrée/sortie des endpoints,
+
+validation des payloads (types, champs obligatoires),
+
+ex. : UserCreate, UserRead, IndicatorCreate, IndicatorUpdate, IndicatorRead.
+
+### app/auth.py
+Gestion de l’authentification :
+
+POST /register : inscription d’un utilisateur (hash du mot de passe, rôle),
+
+POST /login : génération d’un token JWT si les identifiants sont corrects,
+
+GET /me : renvoie les infos de l’utilisateur connecté,
+
+fonctions utilitaires pour décoder le token et récupérer l’utilisateur courant.
+
+### app/crud.py
+Logique métier / accès aux données :
+
+fonctions pour créer, lire, mettre à jour et supprimer des indicateurs,
+
+encapsule les requêtes SQLAlchemy pour garder les routes plus simples.
+
+### app/indicators_routes.py
+Routes liées aux indicateurs :
+
+GET /api/indicators : liste + filtres (type, zone, source, période, pagination),
+
+POST /api/indicators : création (réservé aux admins),
+
+PUT /api/indicators/{id} : mise à jour (admin),
+
+DELETE /api/indicators/{id} : suppression (admin),
+
+utilise get_current_user pour vérifier le rôle.
+
+### app/importer.py
+Import des fichiers CSV :
+
+lit ligne par ligne les fichiers (par ex. ind_atmo_2021.csv, FR_E2_2025-01-01.csv),
+
+nettoie / convertit les données (dates, nombres),
+
+crée des objets Indicator et les insère en base,
+
+retourne un résumé (lignes insérées, erreurs).
+
+### Script d’initialisation
+
+init.py (à la racine du projet)
+Script pour remplir la base de données avec les CSV :
+
+ouvre une session sur la BDD,
+
+appelle les fonctions d’importer.py pour chaque fichier CSV,
+
+affiche dans la console le nombre de lignes insérées et les éventuelles erreurs.
+
+Front-end
+
+### app/index.html
+Interface web en HTML/CSS/JS :
+
+formulaire d’inscription et de connexion,
+
+gestion du token JWT côté navigateur,
+
+appels fetch vers l’API pour :
+
+récupérer et filtrer les indicateurs,
+
+afficher un tableau de résultats,
+
+afficher des graphiques d’évolution,
+
+gérer les formulaires de création / modification / suppression côté admin,
+
+affichage des messages d’erreur renvoyés par l’API.
+
+
+## ⚙️ Guide d'Installation
+
+Suivez ces étapes pour lancer le projet sur votre machine locale.
+
+### Prérequis
+* **Python** 
+* **Git** 
+
+### Étape 1 : Récupérer le projet
+Ouvrez votre terminal et lancez :
+```bash
+git clone git@github.com:RebeccaABENA/ecotrack-api.git
+cd ecotrack
+```
+### Étape 2 : Préparer l'environnement virtuel
+Il est recommandé d'isoler les bibliothèques du projet.
+
+Sous Windows :
+
+```bash
+
+python -m venv venv
+venv\Scripts\activate
+```
+Sous Mac / Linux :
+
+```Bash
+
+python3 -m venv venv
+source venv/bin/activate
+```
+Étape 3 : Installer les dépendances
+Installez les librairies nécessaires (FastAPI, SQLAlchemy, etc.) :
+
+```Bash
+
+pip install -r requirements.txt
+```
+
+Étape 4 : Lancer le Serveur (Backend)
+Assurez-vous d'être dans le dossier contenant le dossier app et lancez :
+
+```Bash
+
+uvicorn app.main:app --reload
+```
+### Le terminal doit afficher : Application startup complete.
+
+Étape 5 : Lancer l'Application (Frontend)
+Ouvrez le dossier app dans votre explorateur de fichiers.
+Double-cliquez sur le fichier index.html.
+
+## Votre navigateur s'ouvre : l'application est prête à etre utilisée !
