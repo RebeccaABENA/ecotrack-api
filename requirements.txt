@@ -5,3 +5,4 @@ alembic
 python-jose[cryptography]
 bcrypt
 pydantic
+python-multipart
